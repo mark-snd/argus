@@ -3,6 +3,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from argus import __version__
 from argus.routers import search, extract, answer
 
 app = FastAPI(
@@ -19,7 +20,7 @@ app = FastAPI(
     * **/extract** — URL에서 콘텐츠 추출
     * **/answer** — 검색 기반 Q&A (요약 답변 포함)
     """,
-    version="0.1.0",
+    version=__version__,
     docs_url="/docs",
     redoc_url="/redoc",
     contact={
@@ -47,7 +48,7 @@ async def root() -> dict:
     """API 서버 상태 확인."""
     return {
         "service": "Argus",
-        "version": "0.1.0",
+        "version": __version__,
         "status": "healthy",
         "endpoints": {
             "search": "/v1/search",

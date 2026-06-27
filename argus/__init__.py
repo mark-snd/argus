@@ -7,3 +7,5 @@ this API tirelessly watches, gathers, and surfaces information from across
 the web — delivering AI-ready search results so your agents never miss
 what matters.
 """
+
+__version__ = "0.1.0"
