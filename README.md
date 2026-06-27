@@ -150,6 +150,50 @@ python3 argus-cli.py extract "https://example.com" --depth advanced
 
 ---
 
+## 아키텍처
+
+Argus는 요청 → 라우터 → 서비스 → 외부 데이터 소스 → 응답 파이프라인으로 동작합니다.
+
+```
+                ┌─────────────┐
+                │   Client    │
+                │  argus-cli  │
+                │ curl, etc   │
+                └──────┬──────┘
+                       │
+                       ▼
+             ┌──────────────────┐
+             │  FastAPI Router  │
+             │  /v1/search      │
+             │  /v1/extract     │
+             │  /v1/answer      │
+             └────────┬─────────┘
+                      │
+        ┌─────────────┼─────────────┐
+        │             │             │
+        ▼             ▼             ▼
+┌─────────────┐ ┌─────────────┐ ┌──────────────┐
+│Search Engine│ │   Crawler   │ │  Summarizer  │
+│ DuckDuckGo  │ │ trafilatura │ │ (extractive) │
+│ HTML API    │ │ BeautifulSoup│ │              │
+└──────┬──────┘ └──────┬──────┘ └──────┬───────┘
+       │              │               │
+       ▼              ▼               ▼
+┌──────────────┐ ┌──────────────┐ ┌──────────────┐
+│  Web Sources │ │ Raw Content  │ │ JSON Response│
+└──────────────┘ └──────────────┘ └──────────────┘
+```
+
+### 런타임 흐름
+
+| 엔드포인트 | 흐름 | 핵심 함수 |
+|-----------|------|----------|
+| `POST /v1/search` | DuckDuckGo 검색 → 각 URL 크롤링 → 스니펫/점수 생성 | `perform_search()` → `fetch_page()` |
+| `POST /v1/extract` | 여러 URL 병렬 크롤링 → 본문 + 메타데이터 추출 | `extract_urls()` → `_extract_single()` |
+| `POST /v1/answer` | DuckDuckGo 검색 → 검색 결과 종합 → 답변 생성 | `perform_search()` → `generate_answer()` |
+
+---
+
 ## 프로젝트 구조
 
 ```
