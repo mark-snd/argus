@@ -1,0 +1,30 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Virtual environments
+venv/
+.env
+.venv
+
+# IDE
+.vscode/
+.idea/
+
+# Claude
+.claude/
+
+# Deployment artifacts
+*.zip
+ai-search-api.zip
+argus.zip
+
+# Logs
+*.log
+stderr.log
+stdout.log
+uvicorn.log
