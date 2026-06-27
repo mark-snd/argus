@@ -46,7 +46,7 @@ async def answer(request: AnswerRequest) -> AnswerResponse:
 
     # 2. 답변 생성
     try:
-        answer_text = generate_answer(
+        answer_text = await generate_answer(
             query=request.query,
             results=search_results,
             include_sources=request.include_sources,

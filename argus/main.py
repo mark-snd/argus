@@ -1,7 +1,15 @@
 """FastAPI 애플리케이션 진입점."""
 
+import os
+from pathlib import Path
+
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+# .env 파일 로드
+env_path = Path(__file__).resolve().parent.parent / ".env"
+load_dotenv(dotenv_path=env_path)
 
 from argus import __version__
 from argus.routers import search, extract, answer

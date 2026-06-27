@@ -60,10 +60,10 @@ async def search(request: SearchRequest) -> SearchResponse:
     # AI 요약 답변 생성
     answer: Optional[str] = None
     if request.include_answer and results:
-        answer = summarize_search_results(
+        answer = await summarize_search_results(
             query=request.query,
             results=results,
-            method="extractive",
+            method="auto",
         )
 
     search_results = [

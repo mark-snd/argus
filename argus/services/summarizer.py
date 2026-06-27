@@ -1,7 +1,9 @@
-"""콘텐츠 요약 서비스 — 규칙 기반 + LLM 인터페이스."""
+"""콘텐츠 요약 서비스 — 규칙 기반 + LLM(SNDWorks Gateway)."""
 
 import re
 from typing import List, Optional
+
+from argus.services.llm_client import get_llm_client
 
 
 def _extract_key_sentences(text: str, num_sentences: int = 3) -> str:
@@ -14,10 +16,10 @@ def _extract_key_sentences(text: str, num_sentences: int = 3) -> str:
     return " ".join(chosen)
 
 
-def summarize_search_results(
+async def summarize_search_results(
     query: str,
     results: List[dict],
-    method: str = "extractive",
+    method: str = "auto",
 ) -> str:
     """여러 검색 결과를 바탕으로 답변을 생성합니다.
 
@@ -28,18 +30,29 @@ def summarize_search_results(
     results : list[dict]
         검색 결과 목록 (title, url, content 포함)
     method : str
-        "extractive" (추출 요약) 또는 "abstractive" (추상 요약, LLM 필요)
+        "auto" (LLM 가능 시 LLM, 불가 시 규칙 기반),
+        "extractive" (강제 규칙 기반),
+        "abstractive" (강제 LLM — 키 없으면 에러)
 
     Returns
     -------
     str
         AI-optimized 요약 답변
     """
-    if method == "extractive" or not results:
+    client = get_llm_client()
+
+    # 강제 규칙 기반
+    if method == "extractive":
         return _extractive_summary(query, results)
 
-    # TODO: 외부 LLM (OpenAI, Claude 등) 연동 시 사용
-    return _llm_summary(query, results)
+    # 강제 LLM (키 없으면 에러)
+    if method == "abstractive":
+        return await _llm_summary(query, results)
+
+    # auto: LLM 가능하면 쓰고, 아니면 규칙 기반 fallback
+    if client.available:
+        return await _llm_summary(query, results)
+    return _extractive_summary(query, results)
 
 
 def _extractive_summary(query: str, results: List[dict]) -> str:
@@ -60,44 +73,23 @@ def _extractive_summary(query: str, results: List[dict]) -> str:
     return summary if len(summary) > 20 else combined[:500]
 
 
-def _llm_summary(query: str, results: List[dict]) -> str:
-    """추상 요약: LLM API를 호출하여 답변을 생성합니다.
-
-    이 함수는 외부 LLM (OpenAI, Anthropic, Ollama 등)이
-    설정되어 있을 때 사용됩니다. 현재는 플레이스홀더입니다.
-    """
-    # 실제 LLM 연동 시 아래와 같은 형태로 구현:
-    #
-    # import openai
-    # context = "\n\n".join(
-    #     f"[{i+1}] {r['title']}\n{r['content'][:500]}"
-    #     for i, r in enumerate(results[:5])
-    # )
-    # prompt = (
-    #     f"질문: {query}\n\n"
-    #     f"아래 정보를 바탕으로 답변해 주세요:\n{context}\n\n"
-    #     f"답변:"
-    # )
-    # response = openai.chat.completions.create(
-    #     model="gpt-4o-mini",
-    #     messages=[{"role": "user", "content": prompt}],
-    # )
-    # return response.choices[0].message.content
-
-    raise NotImplementedError(
-        "추상 요약(abstractive summarization)은 현재 구현되지 않았습니다. "
-        "openai 또는 anthropic API 키를 등록하거나 "
-        "method='extractive'를 사용하세요."
-    )
+async def _llm_summary(query: str, results: List[dict]) -> str:
+    """LLM(SNDWorks Gateway)을 호출하여 추상 요약을 생성합니다."""
+    client = get_llm_client()
+    try:
+        return await client.summarize(query, results)
+    except Exception as exc:
+        # LLM 실패 시 규칙 기반으로 fallback
+        return f"[LLM 요약 실패: {exc}]\n\n{_extractive_summary(query, results)}"
 
 
-def generate_answer(
+async def generate_answer(
     query: str,
     results: List[dict],
     include_sources: bool = True,
 ) -> str:
     """검색 결과를 바탕으로 end-user용 답변 문자열을 생성합니다."""
-    summary = summarize_search_results(query, results, method="extractive")
+    summary = await summarize_search_results(query, results, method="auto")
 
     if not include_sources or not results:
         return summary
